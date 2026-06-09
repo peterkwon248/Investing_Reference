@@ -5,6 +5,7 @@ from app.api.v1.portfolios import router as portfolios_router
 from app.api.v1.favorites import router as favorites_router
 from app.api.v1.analysis import router as analysis_router
 from app.api.v1.chart import router as chart_router
+from app.api.v1.dividend import router as dividend_router
 
 api_router = APIRouter()
 api_router.include_router(stocks_router)
@@ -13,4 +14,5 @@ api_router.include_router(portfolios_router)
 api_router.include_router(favorites_router)
 api_router.include_router(analysis_router)
 api_router.include_router(chart_router)
+api_router.include_router(dividend_router)
 

@@ -8,6 +8,7 @@ import MarketPage from './features/market/MarketPage'
 import MastersLabPage from './features/masters-lab/MastersLabPage'
 import CalculatorPage from './features/calculator/CalculatorPage'
 import SuperChartPage from './features/super-chart/SuperChartPage'
+import SuperDividendPage from './features/super-dividend/SuperDividendPage'
 import ComingSoon from './components/common/ComingSoon'
 
 export default function App() {
@@ -22,8 +23,8 @@ export default function App() {
         <Route path="/masters-lab" element={<MastersLabPage />} />
         <Route path="/calculator" element={<CalculatorPage />} />
         <Route path="/super-chart" element={<SuperChartPage />} />
-        {/* 아직 미구현 기능 — 빈 화면 대신 준비중 안내 */}
-        <Route path="/super-dividend" element={<ComingSoon title="슈퍼배당" />} />
+        <Route path="/super-dividend" element={<SuperDividendPage />} />
+        {/* 아직 미구현 — 빈 화면 대신 준비중 안내 */}
         <Route path="/macro" element={<ComingSoon title="매크로" />} />
         {/* 매칭되지 않는 모든 경로 fallback (404) */}
         <Route
