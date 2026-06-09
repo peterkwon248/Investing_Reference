@@ -1,0 +1,207 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* ========================================
+     TOSS SECURITIES INSPIRED - LIGHT MODE
+     ======================================== */
+  :root {
+    --background: #FFFFFF;
+    --foreground: #191F28;
+
+    --card: #FFFFFF;
+    --card-foreground: #191F28;
+
+    --popover: #FFFFFF;
+    --popover-foreground: #191F28;
+
+    --primary: #3182F6;
+    --primary-foreground: #FFFFFF;
+
+    --secondary: #F2F4F6;
+    --secondary-foreground: #4E5968;
+
+    --muted: #F2F4F6;
+    --muted-foreground: #8B95A1;
+
+    --accent: #F2F4F6;
+    --accent-foreground: #191F28;
+
+    --destructive: #FF4747;
+    --destructive-foreground: #FFFFFF;
+
+    --border: #E5E8EB;
+    --input: #E5E8EB;
+    --ring: #3182F6;
+
+    --radius: 12px;
+
+    /* Signal Colors */
+    --profit: #F04452;
+    --loss: #3182F6;
+  }
+
+  /* ========================================
+     TOSS SECURITIES INSPIRED - DARK MODE
+     ======================================== */
+  .dark {
+    --background: #0F1419;
+    --foreground: #ECEFF4;
+
+    --card: #1B2028;
+    --card-foreground: #ECEFF4;
+
+    --popover: #1B2028;
+    --popover-foreground: #ECEFF4;
+
+    --primary: #4593FC;
+    --primary-foreground: #FFFFFF;
+
+    --secondary: #262D36;
+    --secondary-foreground: #B0B8C1;
+
+    --muted: #262D36;
+    --muted-foreground: #6B7684;
+
+    --accent: #2B3340;
+    --accent-foreground: #ECEFF4;
+
+    --destructive: #FF4747;
+    --destructive-foreground: #FFFFFF;
+
+    --border: #2B3340;
+    --input: #2B3340;
+    --ring: #4593FC;
+
+    /* Signal Colors - Korean convention: red=up, blue=down */
+    --profit: #F04452;
+    --loss: #4593FC;
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar - Toss style */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--muted-foreground);
+    border-radius: 3px;
+    opacity: 0.3;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    opacity: 0.6;
+  }
+}
+
+@layer components {
+  /* Toss-style glass card */
+  .toss-card {
+    @apply bg-card rounded-2xl border border-border/50 p-5;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.04);
+    transition: all 0.2s cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  .dark .toss-card {
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.2);
+  }
+  .toss-card:hover {
+    box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+  }
+  .dark .toss-card:hover {
+    box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.3);
+    border-color: rgba(69, 147, 252, 0.2);
+  }
+
+  /* Metric number animation */
+  .metric-value {
+    @apply text-title-1 font-bold tabular-nums tracking-tight;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Profit/Loss coloring */
+  .text-profit {
+    color: var(--profit);
+  }
+  .text-loss {
+    color: var(--loss);
+  }
+  .bg-profit-subtle {
+    background-color: color-mix(in srgb, var(--profit) 10%, transparent);
+  }
+  .bg-loss-subtle {
+    background-color: color-mix(in srgb, var(--loss) 10%, transparent);
+  }
+
+  /* Loading skeleton - Toss shimmer effect */
+  .skeleton {
+    @apply animate-shimmer rounded-lg;
+    background: linear-gradient(
+      90deg,
+      var(--muted) 25%,
+      color-mix(in srgb, var(--muted) 80%, var(--foreground) 20%) 50%,
+      var(--muted) 75%
+    );
+    background-size: 200% 100%;
+  }
+
+  /* Toss-style button */
+  .toss-btn {
+    @apply inline-flex items-center justify-center rounded-xl px-5 py-3 text-body-2 font-semibold transition-all duration-200;
+    @apply active:scale-[0.97];
+  }
+  .toss-btn-primary {
+    @apply toss-btn bg-primary text-primary-foreground hover:brightness-110;
+  }
+  .toss-btn-secondary {
+    @apply toss-btn bg-secondary text-secondary-foreground hover:bg-accent;
+  }
+  .toss-btn-ghost {
+    @apply toss-btn bg-transparent hover:bg-secondary;
+  }
+
+  /* Toss-style input */
+  .toss-input {
+    @apply w-full rounded-xl border-0 bg-secondary px-4 py-3 text-body-1 outline-none transition-all duration-200;
+    @apply placeholder:text-muted-foreground;
+    @apply focus:ring-2 focus:ring-primary/30 focus:bg-background;
+  }
+
+  /* Toss-style badge */
+  .toss-badge {
+    @apply inline-flex items-center rounded-lg px-2.5 py-1 text-caption font-medium;
+  }
+
+  /* Sidebar nav item */
+  .nav-item {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-body-2 font-medium transition-all duration-200;
+    @apply text-muted-foreground hover:text-foreground hover:bg-secondary;
+  }
+  .nav-item.active {
+    @apply text-primary bg-primary/10 font-semibold;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
