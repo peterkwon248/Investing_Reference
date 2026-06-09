@@ -9,6 +9,7 @@ import MastersLabPage from './features/masters-lab/MastersLabPage'
 import CalculatorPage from './features/calculator/CalculatorPage'
 import SuperChartPage from './features/super-chart/SuperChartPage'
 import SuperDividendPage from './features/super-dividend/SuperDividendPage'
+import MacroPage from './features/macro/MacroPage'
 import ComingSoon from './components/common/ComingSoon'
 
 export default function App() {
@@ -24,8 +25,7 @@ export default function App() {
         <Route path="/calculator" element={<CalculatorPage />} />
         <Route path="/super-chart" element={<SuperChartPage />} />
         <Route path="/super-dividend" element={<SuperDividendPage />} />
-        {/* 아직 미구현 — 빈 화면 대신 준비중 안내 */}
-        <Route path="/macro" element={<ComingSoon title="매크로" />} />
+        <Route path="/macro" element={<MacroPage />} />
         {/* 매칭되지 않는 모든 경로 fallback (404) */}
         <Route
           path="*"
