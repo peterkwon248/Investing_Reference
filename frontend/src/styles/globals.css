@@ -112,7 +112,7 @@
 @layer components {
   /* Toss-style glass card */
   .toss-card {
-    @apply bg-card rounded-2xl border border-border/50 p-5;
+    @apply bg-card rounded-2xl border border-border p-5;
     box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.04);
     transition: all 0.2s cubic-bezier(0.33, 1, 0.68, 1);
   }
@@ -179,7 +179,7 @@
   .toss-input {
     @apply w-full rounded-xl border-0 bg-secondary px-4 py-3 text-body-1 outline-none transition-all duration-200;
     @apply placeholder:text-muted-foreground;
-    @apply focus:ring-2 focus:ring-primary/30 focus:bg-background;
+    @apply focus:ring-2 focus:ring-primary focus:bg-background;
   }
 
   /* Toss-style badge */
@@ -193,7 +193,8 @@
     @apply text-muted-foreground hover:text-foreground hover:bg-secondary;
   }
   .nav-item.active {
-    @apply text-primary bg-primary/10 font-semibold;
+    @apply text-primary font-semibold;
+    background-color: color-mix(in srgb, var(--primary) 10%, transparent);
   }
 }
 
