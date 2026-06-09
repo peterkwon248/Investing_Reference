@@ -12,8 +12,8 @@
 
 | 레이어 | 기술 |
 |---|---|
-| **Frontend** | React 18, Vite 5, TypeScript, TailwindCSS, React Query(@tanstack), Zustand, Axios, React Router 6, Recharts, Framer Motion, Radix UI, Lucide |
-| **Backend** | FastAPI, SQLAlchemy(async/asyncpg), Pydantic v2, Redis, yfinance, pandas |
+| **Frontend** | React 18, Vite 5, TypeScript, TailwindCSS, React Query(@tanstack), Zustand, Axios, React Router 6, Recharts, lightweight-charts, Framer Motion, Radix UI, Lucide |
+| **Backend** | FastAPI, SQLAlchemy(async/asyncpg), Pydantic v2, Redis, yfinance, pandas, numpy |
 | **Infra** | PostgreSQL 16, Redis 7 (Docker Compose), Nginx |
 
 ---
@@ -25,7 +25,7 @@
 ├── backend/app/
 │   ├── core/       # 순수 비즈니스 로직 (백테스트 엔진·지표·대가분석) — DB 의존 없음
 │   ├── data/       # 외부 데이터 소스 (yfinance)
-│   ├── services/   # 서비스 레이어 (캐싱 통합 + DB 접근)
+│   ├── services/   # 서비스 레이어 (캐싱·DB·분석 오케스트레이션)
 │   ├── db/         # SQLAlchemy ORM 모델 + 연결/세션 관리
 │   ├── schemas/    # Pydantic 요청/응답 스키마
 │   ├── api/v1/     # REST 라우트
@@ -37,9 +37,28 @@
     ├── stores/     # Zustand 전역 상태
     ├── api/        # Axios API 클라이언트
     ├── components/ # 공유 컴포넌트 + 레이아웃
-    ├── lib/        # 유틸 / 상수
+    ├── lib/        # 유틸 / 상수 / 계산기 로직
     └── types/      # TypeScript 타입
 ```
+
+---
+
+## 🧪 분석 & 도구 기능 (v5 → v6 풀스택 포팅)
+
+원본 v5(Streamlit)의 5개 기능을 React + FastAPI로 이식. **각 기능의 풀스택 경로(페이지 → 훅/API → 백엔드 → 핵심 로직)**:
+
+| 기능 | 프론트 페이지 | 훅 / API 클라이언트 | 백엔드 서비스 → 엔드포인트 | 핵심 로직 |
+|---|---|---|---|---|
+| 🏆 **대가분석실** | `features/masters-lab/MastersLabPage.tsx` | `hooks/useAnalysis.ts` / `api/analysis.api.ts` | `analysis_service.py` → `GET /analysis/masters/{ticker}` | `core/masters.py` (5대 대가 스코어링) |
+| 🧮 **계산기** | `features/calculator/` (5탭 + 공통컴포넌트) | — *(백엔드 불필요, 순수 프론트)* | — | `lib/calculators.ts` (포워드·영혼법·옵션·세금·환전) |
+| 📈 **슈퍼차트** | `features/super-chart/SuperChartPage.tsx` | `hooks/useChart.ts` / `api/chart.api.ts` | `chart_service.py` → `GET /analysis/chart/{ticker}` | `core/indicators.py` (MA·RSI·MACD·BB·지지저항) |
+| 💰 **슈퍼배당** | `features/super-dividend/SuperDividendPage.tsx` | `hooks/useDividend.ts` / `api/dividend.api.ts` | `dividend_service.py` → `GET /analysis/dividend/{ticker}` | yfinance 배당 시계열 + 등급/CAGR/DRIP |
+| 🌍 **매크로** | `features/macro/MacroPage.tsx` | `hooks/useMacro.ts` / `api/macro.api.ts` | `macro_service.py` → `GET /analysis/macro` | 9지표(VIX·SPY·금·환율 등) 룰 스코어링 |
+
+- **차트**: `lightweight-charts`(슈퍼차트 캔들/MA/RSI/MACD) · `recharts`(슈퍼배당 연도별 막대).
+- **백엔드 패턴**: `core/*` 순수 로직 + yfinance 데이터를 `asyncio.to_thread`로 비블로킹 래핑 → REST로 노출. (`analysis_service.py`가 그 원형)
+- **타입**: `types/{analysis,chart,dividend,macro}.types.ts`, 스키마 `schemas/{analysis,chart,dividend,macro}.py`.
+- 외부 키 필요분(경제캘린더·마켓뉴스·FRED·DART 자동수집·라이브 옵션체인)은 제외하고 계산/분석 핵심만 이식.
 
 ---
 
@@ -67,15 +86,17 @@
 
 ### 📊 기술적 지표 — `backend/app/core/indicators.py`
 `calc_all_indicators()`(MA·RSI·MACD·ATR·볼린저·거래량MA 등 15종), `find_support_resistance()`(지지/저항 클러스터링), `analyze_all()`(이평 배열·골든/데드크로스·종합 신호 0~100점). pandas 벡터 연산.
+> 🔌 **슈퍼차트**(`GET /analysis/chart/{ticker}`)에서 사용 — `chart_service.py`가 이 모듈을 호출.
 
 ### 🏆 5대 투자대가 스코어링 — `backend/app/core/masters.py`
 버핏·린치·그레이엄·드러켄밀러·코스톨라니 각 0~100점 + 종합. `analyze_all_masters()`. 펀더멘털 + 기술 다각 평가.
+> 🔌 **대가분석실**(`GET /analysis/masters/{ticker}`)에서 사용 — `analysis_service.py`가 이 모듈을 호출.
 
 ### 💱 포맷터 — `backend/app/core/formatters.py`
 `format_krw`(억/만 단위), `format_usd`, `format_dual`(USD+KRW 환산), `format_percent`(±부호).
 
 ### 🌐 외부 데이터 — `backend/app/data/yfinance_client.py`
-`get_stock_price`, `get_stock_history`(OHLCV), `get_exchange_rate`(USD/KRW), `search_stock`. 예외 시 기본값 폴백.
+`get_stock_price`, `get_stock_history`(OHLCV), `get_exchange_rate`(USD/KRW), `search_stock`, `get_analysis_data`(info+1년 이력+현재가, 분석용). 예외 시 기본값 폴백.
 > 참고: Selenium(네이버 스크래핑)·WebSocket은 `config`·`docker-compose`·`api/ws/`에 **스캐폴딩만** 있고 구현 전 단계.
 
 ### ⚡ Redis 캐싱 — `backend/app/services/cache_service.py`
@@ -89,6 +110,10 @@
 | 포트폴리오 CRUD | `portfolio_service.py` | async ORM, `selectinload`로 N+1 방지, flush/refresh |
 | 즐겨찾기 | `favorite_service.py` | 티커 단위 CRUD + 중복 방지 |
 | 백테스트 실행 | `backtest_service.py` | 데이터 로딩(async) ↔ 엔진 계산(sync) 분리 |
+| 대가분석 | `analysis_service.py` | `masters.py` + yfinance info/hist, `asyncio.to_thread` 비블로킹 |
+| 슈퍼차트 | `chart_service.py` | `indicators.py` 재사용, OHLCV 캔들 + 지표 시계열 + 종합진단 |
+| 슈퍼배당 | `dividend_service.py` | yfinance 배당 시계열, 배당왕/귀족 등급·CAGR·DRIP |
+| 매크로 | `macro_service.py` | 9지표 `asyncio.gather` 동시조회 + 룰 기반 시장 스코어링 |
 
 ### 🗄️ DB 레이어 — `backend/app/db/`
 - `database.py`: async 엔진/세션 싱글톤, 커넥션 풀링(pool_size=20), `init_db()`(테이블 자동 생성)·`get_redis()`·`close_db()`
@@ -104,13 +129,17 @@
 | 백테스트 | `backtests.py` | `POST /backtests/{infinite-buy,dca,buy-and-hold,value-rebalance,compare}`, `GET /backtests/presets` |
 | 포트폴리오 | `portfolios.py` | `GET/POST /portfolios`, `GET/PUT/DELETE /portfolios/{id}`, `positions`·`trades`·`funds` 하위 |
 | 즐겨찾기 | `favorites.py` | `GET/POST /favorites`, `DELETE /favorites/{ticker}`, `GET /favorites/{ticker}/check` |
-| 스키마 | `schemas/{backtest,portfolio,stock}.py` | 요청/응답 Pydantic 모델 (Create / Update / Response 분리) |
+| 대가분석 | `analysis.py` | `GET /analysis/masters/{ticker}` (5대 대가 점수·의견·종합판정) |
+| 슈퍼차트 | `chart.py` | `GET /analysis/chart/{ticker}` (캔들 + MA/RSI/MACD 시계열 + 종합진단) |
+| 슈퍼배당 | `dividend.py` | `GET /analysis/dividend/{ticker}` (배당수익률·등급·CAGR·DRIP) |
+| 매크로 | `macro.py` | `GET /analysis/macro` (9지표 시장진단 + 전략) |
+| 스키마 | `schemas/{backtest,portfolio,stock,analysis,chart,dividend,macro}.py` | 요청/응답 Pydantic 모델 |
 
 ## 프론트엔드
 
 ### 🧭 라우팅 & 레이아웃
 - `frontend/src/main.tsx` — BrowserRouter + QueryClientProvider 루트
-- `frontend/src/App.tsx` — Routes 정의
+- `frontend/src/App.tsx` — Routes 정의 (미매칭 경로는 `components/common/ComingSoon.tsx` 404 폴백)
 - `frontend/src/components/layout/` — `AppLayout`(Outlet 프레임) · `Sidebar`(접이식 260↔72px) · `Header`(환율·테마 토글)
 
 | 라우트 | 파일 | 비고 |
@@ -118,28 +147,37 @@
 | `/` | `features/home/HomePage.tsx` | 대시보드(환율·즐겨찾기·퀵 액션) |
 | `/portfolio` | `features/portfolio/PortfolioPage.tsx` | 포트폴리오 관리(모달·카드·디테일 패널) |
 | `/simulation` | `features/simulation/SimulationPage.tsx` | 백테스트 실행 |
-| `/analysis` | `features/analysis/AnalysisPage.tsx` | 분석 (개발 중) |
-| `/market` | `features/market/MarketPage.tsx` | 마켓 (개발 중) |
+| `/analysis` | `features/analysis/AnalysisPage.tsx` | 분석 (기본 스텁) |
+| `/market` | `features/market/MarketPage.tsx` | 마켓 (기본 스텁) |
+| `/masters-lab` | `features/masters-lab/MastersLabPage.tsx` | 🏆 대가분석실 — 5대 거장 종목 평가 |
+| `/calculator` | `features/calculator/CalculatorPage.tsx` | 🧮 계산기 — 포워드·영혼법·옵션·세금·환전 5탭 |
+| `/super-chart` | `features/super-chart/SuperChartPage.tsx` | 📈 슈퍼차트 — 캔들 + 기술지표 + 매매진단 |
+| `/super-dividend` | `features/super-dividend/SuperDividendPage.tsx` | 💰 슈퍼배당 — 배당 분석·등급·DRIP 예측 |
+| `/macro` | `features/macro/MacroPage.tsx` | 🌍 매크로 — 글로벌 9지표 시장진단 |
 
 ### 🔄 상태관리 — React Query + Zustand
-- **데이터 훅** `frontend/src/hooks/`: `useStockData`(시세·이력·검색), `useExchangeRate`(10분 주기 refetch + 스토어 동기화), `usePortfolio`(쿼리+뮤테이션), `useFavorites`
+- **데이터 훅** `frontend/src/hooks/`: `useStockData`(시세·이력·검색), `useExchangeRate`(10분 주기 refetch + 스토어 동기화), `usePortfolio`, `useFavorites`, `useAnalysis`(대가분석), `useChart`(슈퍼차트), `useDividend`(슈퍼배당), `useMacro`(매크로)
 - **전역 상태** `frontend/src/stores/`: `useAppStore`(테마·사이드바·환율), `usePortfolioStore`, `useBacktestStore`, `useFavoritesStore`
 - **패턴**: 서버 상태 = React Query, UI 상태 = Zustand, 뮤테이션 성공 시 스토어 동기화
 
 ### 📡 API 클라이언트 — `frontend/src/api/`
-`client.ts`(Axios 인스턴스, `/api/v1` baseURL, 30s 타임아웃, 에러 인터셉터) + 리소스별 모듈(`stocks` · `portfolios` · `favorites` · `backtests.api.ts`).
+`client.ts`(Axios 인스턴스, `/api/v1` baseURL, 30s 타임아웃, 에러 인터셉터) + 리소스별 모듈: `stocks` · `portfolios` · `favorites` · `backtests` · `analysis` · `chart` · `dividend` · `macro`.
 
 ### 🎨 토스증권 스타일 디자인 시스템
 - `frontend/tailwind.config.ts` — 토스 컬러 팔레트(라이트/다크), Pretendard 폰트, 커스텀 섀도·애니메이션
 - `frontend/src/styles/globals.css` — CSS 변수 + `.toss-card` · `.toss-btn-primary` · `.toss-input` · `.nav-item` 컴포넌트 클래스
 - `frontend/src/lib/utils.ts` — `cn()`(clsx+tailwind-merge), `formatKRW/USD/Percent`, `getProfitColor`(🔴수익 · 🔵손실, 한국 관례)
 - **♻️ 재사용 포인트**: 색을 전부 CSS 변수로 → 다크모드 토글이 변수 교체만으로 동작
+- **⚠️ 주의(레퍼런스 학습거리)**: 색 토큰이 통짜 CSS 변수(`var(--x)`)라 **Tailwind 불투명도 modifier(`bg-primary/10` 등)가 안 먹음.** 반투명이 필요하면 기본 팔레트(`emerald/rose/...`) 또는 `color-mix()`를 사용.
 
 ### 🧱 공통 컴포넌트 — `frontend/src/components/`
-`data-display/MetricCard`(KPI 카드) · `common/Skeleton`(시머 로딩) · `common/LoadingSpinner` · `common/ErrorBoundary` · `forms/StockSearchInput`(300ms 디바운스 자동완성 + 즐겨찾기 토글) · `charts/PriceChart`(Recharts AreaChart, 등락 색 자동).
+`data-display/MetricCard`(KPI 카드) · `common/Skeleton`(시머 로딩) · `common/LoadingSpinner` · `common/ErrorBoundary` · `common/ComingSoon`(미구현/404 안내) · `forms/StockSearchInput`(300ms 디바운스 자동완성 + 즐겨찾기 토글) · `charts/PriceChart`(Recharts AreaChart).
 
 ### 🔤 타입 — `frontend/src/types/`
-`stock.types.ts` · `portfolio.types.ts` · `backtest.types.ts` — API 모델 인터페이스(요청/응답 분리).
+`stock` · `portfolio` · `backtest` · `analysis` · `chart` · `dividend` · `macro` `.types.ts` — API 모델 인터페이스.
+
+### 🧮 계산기 로직 — `frontend/src/lib/calculators.ts`
+포워드 가치투자(EPS/BPS·PER/PBR/PSR·적정주가), 영혼법(물타기 청산 시뮬), 옵션 P&L, 세금(양도·배당), 환전 타이밍 — **순수 TS 함수**(백엔드 불필요). 각 함수에 v5 원본 위치 JSDoc.
 
 ---
 
@@ -170,9 +208,11 @@ npm run dev
 - **전략 = 메서드 하나** (`engine.py`): 백테스트 전략을 `run_*()`로 독립화 → 확장 쉬움
 - **교체 가능한 비용 모델** (`BacktestConfig` 프리셋): 시장/자산별 거래비용 분리
 - **캐시 인지 서비스 파사드** (`stock_service`): 외부 API ↔ Redis TTL 캐시 ↔ 비즈니스 로직 3단 분리
+- **순수 core 로직 → REST 노출** (`analysis/chart/macro_service`): `core/*` 동기 계산을 `asyncio.to_thread`/`gather`로 감싸 비블로킹 API화
 - **async DB + DI** (`dependencies.get_db`): 트랜잭션 자동 commit/rollback, `selectinload` N+1 방지
 - **React Query + Zustand 이중화**: 서버 상태/UI 상태 분리, 뮤테이션 → 스토어 동기화
 - **CSS 변수 디자인 토큰** (`globals.css`): 라이트/다크 토글을 변수 교체로
+- **차트 생명주기 관리** (`SuperChartPage`): `lightweight-charts`를 `useEffect`에서 생성/`remove()` + `ResizeObserver`로 정리
 
 ---
 
