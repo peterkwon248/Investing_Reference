@@ -77,3 +77,17 @@ def search_stock(query: str) -> List[Dict]:
     except Exception:
         pass
     return []
+
+
+def get_analysis_data(ticker: str) -> Optional[Dict]:
+    """대가분석용 원시 데이터: 펀더멘털(info) + 1년 가격 이력(DataFrame) + 현재가"""
+    try:
+        stock = yf.Ticker(ticker)
+        info = stock.info or {}
+        hist = stock.history(period="1y")
+        if hist.empty:
+            return None
+        current_price = float(hist['Close'].iloc[-1])
+        return {"info": info, "hist": hist, "current_price": current_price}
+    except Exception:
+        return None
